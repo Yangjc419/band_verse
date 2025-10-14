@@ -1,0 +1,95 @@
+.poem-detail-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.back-button {
+  margin-bottom: 2rem;
+}
+
+.poem-content-card {
+  margin-bottom: 2rem;
+  border-radius: 12px;
+}
+
+.poem-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.poem-title {
+  margin-bottom: 1rem;
+  color: #1890ff;
+}
+
+.poem-meta {
+  margin-bottom: 1rem;
+}
+
+.poem-content {
+  background: #fafafa;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.poem-content pre {
+  font-size: 1.2rem;
+  line-height: 2;
+  color: #333;
+  font-family: 'KaiTi', '楷体', serif;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.poem-description {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f9f9f9;
+  border-left: 4px solid #1890ff;
+  border-radius: 4px;
+}
+
+.poem-tags {
+  margin-bottom: 2rem;
+}
+
+.poem-actions {
+  text-align: center;
+}
+
+.comment-section {
+  border-radius: 12px;
+}
+
+.comment-form {
+  margin-bottom: 1rem;
+}
+
+.comment-list .ant-comment {
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.comment-list .ant-comment:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .poem-detail-page {
+    padding: 1rem;
+  }
+  
+  .poem-content {
+    padding: 1rem;
+  }
+  
+  .poem-content pre {
+    font-size: 1.1rem;
+    line-height: 1.8;
+  }
+}
