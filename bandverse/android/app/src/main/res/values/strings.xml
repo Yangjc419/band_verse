@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Bandverse</string>
+    <string name="home">首页</string>
+    <string name="history">历史</string>
+    <string name="create">创建推荐</string>
+    <string name="profile">我的</string>
+    <string name="loading">加载中...</string>
+    <string name="submit_recommendation">提交推荐</string>
+    <string name="recommendation_reason">推荐理由（选填）</string>
+    <string name="select_song">选择歌曲</string>
+    <string name="select_lyric">选择歌词</string>
+    <string name="no_recommendation">暂无推荐</string>
+    <string name="error_occurred">发生错误</string>
+</resources>

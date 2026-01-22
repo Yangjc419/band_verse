@@ -1,0 +1,394 @@
+{
+  "name": "Daily Recommendation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "functionCode": "// Get today's date\nconst today = new Date().toISOString().split('T')[0];\n\n// Return the date for next nodes\nreturn [{ json: { date: today } }];"
+      },
+      "id": "get-date",
+      "name": "Get Today's Date",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT * FROM daily_recommendations WHERE recommended_date = '{{ $json.date }}' LIMIT 1;",
+        "options": {}
+      },
+      "id": "check-existing",
+      "name": "Check Existing Recommendation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [600, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-service-role",
+          "name": "Supabase Service Role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-has-data",
+      "name": "Has Existing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT ur.*, p.username, p.avatar_url, s.title as song_title, b.name as band_name FROM user_recommendations ur JOIN profiles p ON ur.user_id = p.id JOIN songs s ON ur.song_id = s.id JOIN bands b ON ur.band_id = b.id WHERE ur.status = 'approved' ORDER BY RANDOM() LIMIT 1;",
+        "options": {}
+      },
+      "id": "get-random-recommendation",
+      "name": "Get Random Recommendation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1000, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-service-role",
+          "name": "Supabase Service Role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-random-result",
+      "name": "Random Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO daily_recommendations (recommended_date, user_recommendation_id, created_at) VALUES ('{{ $('Get Today\\'s Date').item.json.date }}', '{{ $json.id }}', NOW());",
+        "options": {}
+      },
+      "id": "save-daily-recommendation",
+      "name": "Save Daily Recommendation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1400, 100],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-service-role",
+          "name": "Supabase Service Role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT s.*, a.*, b.* FROM songs s JOIN albums a ON s.album_id = a.id JOIN bands b ON a.band_id = b.id WHERE s.lyrics IS NOT NULL ORDER BY RANDOM() LIMIT 1;",
+        "options": {}
+      },
+      "id": "fallback-random-song",
+      "name": "Fallback: Get Random Song",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1400, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-service-role",
+          "name": "Supabase Service Role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Split lyrics by lines and filter\nconst lyrics = $json.lyrics.split('\\n').filter(line => line.trim().length > 10);\n\n// Pick random lyric\nconst randomLyric = lyrics[Math.floor(Math.random() * lyrics.length)];\n\nreturn [{ json: {\n  song_id: $json.id,\n  band_id: $json.band_id,\n  lyric: randomLyric,\n  title: $json.title,\n  band_name: $json.name\n}}];"
+      },
+      "id": "pick-random-lyric",
+      "name": "Pick Random Lyric",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO user_recommendations (user_id, song_id, lyric, band_id, recommendation_reason, status, created_at) VALUES ('00000000-0000-0000-0000-000000000000', '{{ $json.song_id }}', '{{ $json.lyric }}', '{{ $json.band_id }}', '系统推荐', 'approved', NOW());",
+        "options": {}
+      },
+      "id": "create-system-recommendation",
+      "name": "Create System Recommendation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1800, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-service-role",
+          "name": "Supabase Service Role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO daily_recommendations (recommended_date, user_recommendation_id, created_at) VALUES ('{{ $('Get Today\\'s Date').item.json.date }}', LAST_INSERT_ID(), NOW());",
+        "options": {}
+      },
+      "id": "save-fallback-recommendation",
+      "name": "Save Fallback Recommendation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2000, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-service-role",
+          "name": "Supabase Service Role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=SELECT dr.*, ur.lyric, ur.recommendation_reason, s.title as song_title, b.name as band_name, p.username, p.avatar_url FROM daily_recommendations dr JOIN user_recommendations ur ON dr.user_recommendation_id = ur.id JOIN songs s ON ur.song_id = s.id JOIN bands b ON ur.band_id = b.id JOIN profiles p ON ur.user_id = p.id WHERE dr.recommended_date = '{{ $('Get Today\\'s Date').item.json.date }}';",
+        "options": {}
+      },
+      "id": "verify-recommendation",
+      "name": "Verify Recommendation",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [2200, 200],
+      "credentials": {
+        "supabaseApi": {
+          "id": "supabase-service-role",
+          "name": "Supabase Service Role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const recommendation = $json[0];\n\nconst message = `今日推荐已生成:\\n\\n\"${recommendation.lyric}\"\\n\\n出自：${recommendation.song_title}\\n乐队：${recommendation.band_name}\\n推荐人：${recommendation.username}`;\n\nreturn [{ json: { \n  success: true,\n  message: message,\n  recommendation: recommendation\n}}];"
+      },
+      "id": "format-message",
+      "name": "Format Success Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2400, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "const date = $('Get Today\\'s Date').item.json.date;\n\nreturn [{ json: { \n  success: true,\n  message: `今日推荐已存在（${date}），跳过生成`\n}}];"
+      },
+      "id": "format-skip-message",
+      "name": "Format Skip Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 400]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{ json: { \n  success: false,\n  message: `未能找到可用的推荐数据`\n}}];"
+      },
+      "id": "format-error-message",
+      "name": "Format Error Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1400, 500]
+    }
+  ],
+  "connections": {
+    "Cron Trigger": {
+      "main": [[
+        {
+          "node": "Get Today's Date",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Get Today's Date": {
+      "main": [[
+        {
+          "node": "Check Existing Recommendation",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Check Existing Recommendation": {
+      "main": [[
+        {
+          "node": "Has Existing?",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Has Existing?": {
+      "main": [[
+        {
+          "node": "Get Random Recommendation",
+          "type": "main",
+          "index": 0
+        }
+      ], [
+        {
+          "node": "Format Skip Message",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Get Random Recommendation": {
+      "main": [[
+        {
+          "node": "Random Found?",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Random Found?": {
+      "main": [[
+        {
+          "node": "Save Daily Recommendation",
+          "type": "main",
+          "index": 0
+        }
+      ], [
+        {
+          "node": "Fallback: Get Random Song",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Save Daily Recommendation": {
+      "main": [[
+        {
+          "node": "Verify Recommendation",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Fallback: Get Random Song": {
+      "main": [[
+        {
+          "node": "Pick Random Lyric",
+          "type": "main",
+          "index": 0
+        }
+      ], [
+        {
+          "node": "Format Error Message",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Pick Random Lyric": {
+      "main": [[
+        {
+          "node": "Create System Recommendation",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Create System Recommendation": {
+      "main": [[
+        {
+          "node": "Save Fallback Recommendation",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Save Fallback Recommendation": {
+      "main": [[
+        {
+          "node": "Verify Recommendation",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Verify Recommendation": {
+      "main": [[
+        {
+          "node": "Format Success Message",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-13T00:00:00.000Z",
+  "versionId": "1"
+}
